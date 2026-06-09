@@ -51,6 +51,10 @@ def bocpd(
 
     H = float(hazard)
 
+    # Complexity note: the run-length arrays grow by one element per step (no
+    # pruning), so this is O(n^2). Fine for backtest-length series (<= a few
+    # thousand points); prune the run-length tail if ever fed very long inputs.
+
     # Run-length distribution R: R[r] = P(run length == r). Grows by one each step.
     R = np.array([1.0])
 

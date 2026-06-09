@@ -14,6 +14,7 @@ and keep the highest-log-likelihood model. This stays fully deterministic for a
 fixed `seed` while reliably recovering the three-regime structure.
 """
 
+import logging
 import warnings
 
 import numpy as np
@@ -50,13 +51,19 @@ class RegimeHMM:
                 random_state=self.seed + r,
             )
             try:
+                # hmmlearn reports non-convergence at n_iter via the `logging`
+                # module (not `warnings`); that is benign here since we keep the
+                # best of many restarts. Silence both channels for clean output.
+                hmm_logger = logging.getLogger("hmmlearn")
+                prev_level = hmm_logger.level
                 with warnings.catch_warnings():
-                    # hmmlearn emits a noisy ConvergenceMonitor warning when EM
-                    # tops out at n_iter; that is benign here (we keep the best
-                    # of many restarts), so silence it for clean test output.
                     warnings.simplefilter("ignore")
-                    model.fit(Xz)
-                    score = float(model.score(Xz))
+                    hmm_logger.setLevel(logging.ERROR)
+                    try:
+                        model.fit(Xz)
+                        score = float(model.score(Xz))
+                    finally:
+                        hmm_logger.setLevel(prev_level)
             except Exception:
                 continue
             if score > best_score:
