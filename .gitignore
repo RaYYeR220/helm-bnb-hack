@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.uv/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Node / Next.js
+node_modules/
+.next/
+dist/
+build/
+
+# Data cache (on-chain indexer, parquet/duckdb)
+data_cache/
+*.duckdb
+*.parquet
+
+# Secrets / env
+.env
+.env.*
+!.env.example
+*.key
+keystore/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Remember buffer
+.remember/tmp/
+.remember/logs/
