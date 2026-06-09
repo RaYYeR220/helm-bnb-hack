@@ -39,6 +39,23 @@ class CMCAdapter:
         resp.raise_for_status()
         return resp.json()
 
+    @staticmethod
+    def _extract_quotes(data: dict, symbol: str) -> list:
+        """Pull the OHLCV quote list from a /v2 historical response.
+
+        The /v2 endpoint keys `data` by the queried symbol and returns a LIST
+        (one entry per CMC id sharing that symbol); the first entry is the
+        canonical match. Falls back to a dict-per-symbol or a flat `quotes`
+        (by-id) shape."""
+        entry = data.get(symbol) if isinstance(data, dict) else None
+        if isinstance(entry, list):
+            return entry[0].get("quotes", []) if entry else []
+        if isinstance(entry, dict):
+            return entry.get("quotes", [])
+        if isinstance(data, dict):
+            return data.get("quotes", [])
+        return []
+
     def quotes_latest(self, symbols: list[str], convert: str = "USD") -> dict:
         """Return {symbol: {price, volume_24h}} for the requested symbols."""
         data = self._get(
@@ -71,7 +88,7 @@ class CMCAdapter:
                 "convert": convert,
             },
         )
-        quotes = (payload.get("data") or {}).get("quotes", [])
+        quotes = self._extract_quotes(payload.get("data") or {}, symbol)
         rows = []
         for q in quotes:
             usd = q["quote"][convert]

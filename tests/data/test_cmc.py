@@ -25,22 +25,32 @@ def test_quotes_latest_parses_price():
     assert quotes["ETH"]["price"] == 3000.0
 
 
-@respx.mock
-def test_ohlcv_historical_returns_dataframe():
-    respx.get(f"{BASE}/v2/cryptocurrency/ohlcv/historical").mock(
-        return_value=httpx.Response(
-            200,
-            json={
-                "data": {
+# Real /v2 shape: `data` is keyed by the queried symbol and holds a LIST
+# (one entry per CMC id sharing that symbol), each with a `quotes` array.
+def _v2_ohlcv_body():
+    return {
+        "data": {
+            "ETH": [
+                {
+                    "id": 1027,
+                    "name": "Ethereum",
+                    "symbol": "ETH",
                     "quotes": [
                         {"time_open": "2024-01-01T00:00:00.000Z",
                          "quote": {"USD": {"open": 1, "high": 2, "low": 0.5, "close": 1.5, "volume": 10}}},
                         {"time_open": "2024-01-02T00:00:00.000Z",
                          "quote": {"USD": {"open": 1.5, "high": 2.5, "low": 1.0, "close": 2.0, "volume": 12}}},
-                    ]
+                    ],
                 }
-            },
-        )
+            ]
+        }
+    }
+
+
+@respx.mock
+def test_ohlcv_historical_returns_dataframe():
+    respx.get(f"{BASE}/v2/cryptocurrency/ohlcv/historical").mock(
+        return_value=httpx.Response(200, json=_v2_ohlcv_body())
     )
     adapter = CMCAdapter(api_key="k", base_url=BASE)
     df = adapter.ohlcv_historical("ETH", "2024-01-01", "2024-01-02")
@@ -48,6 +58,23 @@ def test_ohlcv_historical_returns_dataframe():
     assert list(df.columns) == ["open", "high", "low", "close", "volume"]
     assert isinstance(df.index, pd.DatetimeIndex)
     assert df["close"].iloc[-1] == 2.0
+
+
+@respx.mock
+def test_ohlcv_historical_handles_flat_by_id_shape():
+    # Fallback: some responses put `quotes` directly under `data` (by-id query).
+    respx.get(f"{BASE}/v2/cryptocurrency/ohlcv/historical").mock(
+        return_value=httpx.Response(
+            200,
+            json={"data": {"quotes": [
+                {"time_open": "2024-01-01T00:00:00.000Z",
+                 "quote": {"USD": {"open": 1, "high": 2, "low": 0.5, "close": 1.5, "volume": 10}}},
+            ]}},
+        )
+    )
+    adapter = CMCAdapter(api_key="k", base_url=BASE)
+    df = adapter.ohlcv_historical("ETH", "2024-01-01", "2024-01-01")
+    assert df["close"].iloc[-1] == 1.5
 
 
 @respx.mock
