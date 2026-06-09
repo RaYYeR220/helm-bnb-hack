@@ -34,3 +34,6 @@ Thumbs.db
 # Remember buffer
 .remember/tmp/
 .remember/logs/
+
+# Playwright MCP artifacts
+.playwright-mcp/
