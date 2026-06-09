@@ -17,6 +17,11 @@ def run_backtest(
 ) -> BacktestResult:
     config = config or BacktestConfig()
     prices = prices.sort_index()
+    if prices.shape[0] < 2 or prices.shape[1] == 0:
+        raise ValueError(
+            "run_backtest needs a price panel with >=2 dates and >=1 symbol; "
+            f"got shape {prices.shape} (no symbols had data for the window?)."
+        )
     dates = prices.index
     cost_rate = (config.fee_bps + config.slippage_bps) / 10_000.0
 
@@ -24,7 +29,7 @@ def run_backtest(
     prev_w = pd.Series(0.0, index=prices.columns)
 
     equity_vals: list[float] = [config.initial_capital]
-    period_returns: list[float] = [0.0]
+    period_returns: list[float] = [float("nan")]   # day-0 has no return period
     weight_rows: list[pd.Series] = [prev_w.copy()]
     trade_rows: list[dict] = []
 

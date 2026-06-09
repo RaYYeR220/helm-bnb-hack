@@ -11,7 +11,7 @@ def sharpe(returns: pd.Series, periods_per_year: int = PERIODS_PER_YEAR) -> floa
     r = returns.dropna()
     if len(r) == 0:
         return 0.0
-    sd = r.std(ddof=0)
+    sd = r.std(ddof=1)  # sample std — standard Sharpe convention
     if sd == 0 or np.isnan(sd) or sd < 1e-12:
         return 0.0
     return float(np.sqrt(periods_per_year) * r.mean() / sd)
@@ -23,7 +23,7 @@ def sortino(returns: pd.Series, periods_per_year: int = PERIODS_PER_YEAR) -> flo
     if len(r) == 0:
         return 0.0
     downside = r[r < 0]
-    dd = downside.std(ddof=0)
+    dd = downside.std(ddof=1)  # sample downside deviation
     if dd == 0 or np.isnan(dd):
         return 0.0
     return float(np.sqrt(periods_per_year) * r.mean() / dd)

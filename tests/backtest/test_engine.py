@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 import pandas as pd
 
@@ -36,3 +37,11 @@ def test_metrics_attached():
     assert "sharpe" in res.metrics
     assert "max_drawdown" in res.metrics
     assert len(res.equity) == 20
+    assert isinstance(res.metrics["sharpe"], float)
+    assert res.metrics["max_drawdown"] <= 0.0
+    assert 0.0 <= res.metrics["win_rate"] <= 1.0
+
+
+def test_empty_panel_raises():
+    with pytest.raises(ValueError):
+        run_backtest(pd.DataFrame(), EqualWeight())

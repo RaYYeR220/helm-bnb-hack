@@ -23,12 +23,11 @@ def main() -> None:
 
     end = date.today()
     start = end - timedelta(days=365)
-    adapter = CMCAdapter(api_key=CMC_API_KEY, base_url=CMC_BASE_URL)
     cache = OHLCVCache()
-
-    panel = build_price_panel(
-        MAJORS, adapter, cache, start.isoformat(), end.isoformat()
-    )
+    with CMCAdapter(api_key=CMC_API_KEY, base_url=CMC_BASE_URL) as adapter:
+        panel = build_price_panel(
+            MAJORS, adapter, cache, start.isoformat(), end.isoformat()
+        )
     print(f"Panel: {panel.shape[0]} days x {panel.shape[1]} symbols -> {list(panel.columns)}")
 
     result = run_backtest(panel, CrossSectionalMomentum(lookback=30, top_n=3), BacktestConfig())

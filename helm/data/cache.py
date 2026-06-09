@@ -37,26 +37,34 @@ def build_price_panel(
     end: str,
     interval: str = "daily",
 ) -> pd.DataFrame:
-    """Assemble a close-price panel. Cache hits skip the adapter; symbols whose
-    fetch fails or returns empty are skipped (logged via the returned columns)."""
+    """Assemble a close-price panel sliced to [start, end].
+
+    The cache is keyed by symbol (one-time backfill model): a cache hit is sliced
+    to the requested window; if the slice is empty (cached data was for a different
+    window) the symbol is re-fetched and the cache overwritten. Symbols whose fetch
+    fails or returns empty are skipped. Partial coverage inside the window is
+    tolerated (Plan B's historical indexer supersedes this cache)."""
     closes: dict[str, pd.Series] = {}
     for sym in symbols:
         df = cache.get(sym)
-        if df is None:
+        if df is not None and not df.empty:
+            df = df.loc[start:end]
+        else:
+            df = None
+        if df is None or df.empty:
             try:
-                df = adapter.ohlcv_historical(sym, start, end, interval=interval)
+                fetched = adapter.ohlcv_historical(sym, start, end, interval=interval)
             except Exception:
                 continue
-            if df is None or df.empty:
+            if fetched is None or fetched.empty:
                 continue
-            cache.put(sym, df)
-        if df.empty:
-            continue
+            cache.put(sym, fetched)
+            df = fetched.loc[start:end]
+            if df.empty:
+                continue
         closes[sym] = df["close"]
     if not closes:
         return pd.DataFrame()
-    panel = pd.DataFrame(closes)
-    panel = panel.sort_index()
-    # preserve requested column order for the symbols that survived
+    panel = pd.DataFrame(closes).sort_index()
     ordered = [s for s in symbols if s in panel.columns]
     return panel[ordered]

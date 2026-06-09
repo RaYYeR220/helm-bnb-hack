@@ -18,9 +18,21 @@ class CMCAdapter:
         timeout: float = 30.0,
     ):
         self.base_url = base_url.rstrip("/")
+        self._owns_client = client is None
         self._client = client or httpx.Client(
             timeout=timeout, headers={"X-CMC_PRO_API_KEY": api_key, "Accept": "application/json"}
         )
+
+    def close(self) -> None:
+        """Close the underlying client if this adapter created it."""
+        if self._owns_client:
+            self._client.close()
+
+    def __enter__(self) -> "CMCAdapter":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.close()
 
     def _get(self, path: str, params: dict) -> dict:
         resp = self._client.get(f"{self.base_url}{path}", params=params)
@@ -65,7 +77,7 @@ class CMCAdapter:
             usd = q["quote"][convert]
             rows.append(
                 {
-                    "time": pd.to_datetime(q["time_open"]).tz_localize(None).normalize(),
+                    "time": pd.to_datetime(q["time_open"], utc=True).tz_convert(None).normalize(),
                     "open": usd["open"],
                     "high": usd["high"],
                     "low": usd["low"],

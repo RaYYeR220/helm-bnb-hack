@@ -33,3 +33,12 @@ def test_momentum_all_negative_goes_to_cash():
     panel = pd.DataFrame({"A": down, "B": down * 0.9}, index=idx)
     w = CrossSectionalMomentum(lookback=20, top_n=2).target_weights(panel)
     assert w.sum() == 0.0          # no positive momentum -> cash
+
+
+def test_momentum_top_n_larger_than_universe():
+    # top_n exceeds the number of names; nlargest must not error,
+    # and only strictly-positive-momentum names get weight.
+    strat = CrossSectionalMomentum(lookback=20, top_n=10)
+    w = strat.target_weights(_trending_panel())
+    assert w["A"] == 1.0     # only A has positive momentum in the trending panel
+    assert abs(w.sum() - 1.0) < 1e-9
