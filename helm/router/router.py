@@ -2,8 +2,13 @@
 
 The router consumes a per-date regime-label series, walks it with hysteresis to
 suppress short flickers, and delegates `target_weights` to the regime-appropriate
-sub-strategy.
+sub-strategy. An optional `risk_gate` (Regime v2) overrides everything: when the
+gate reports a confirmed market downtrend, the router goes defensive regardless
+of the HMM regime — the 3-state taxonomy cannot tell up-trends from down-trends,
+and mean-reverting into a bear market buys falling knives.
 """
+
+from typing import Callable
 
 import pandas as pd
 
@@ -47,13 +52,19 @@ class RegimeRouter(Strategy):
         strategies: dict[str, Strategy],
         hysteresis: int = 3,
         default_regime: str = "ranging",
+        risk_gate: Callable[[pd.DataFrame], bool] | None = None,
     ):
         self.regime_path = regime_path.sort_index()
         self.strategies = strategies
         self.hysteresis = hysteresis
         self.default_regime = default_regime
+        self.risk_gate = risk_gate
 
     def target_weights(self, prices_hist: pd.DataFrame) -> pd.Series:
+        # Regime v2: the risk-off gate overrides regime routing entirely —
+        # capital preservation first, regardless of what the HMM says.
+        if self.risk_gate is not None and self.risk_gate(prices_hist):
+            return self.strategies["high_volatility"].target_weights(prices_hist)
         date = prices_hist.index[-1]
         if len(self.regime_path) == 0 or date not in self.regime_path.index:
             return self._zero_weights(prices_hist)

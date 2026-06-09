@@ -104,3 +104,73 @@ def test_router_returns_cash_when_date_not_in_path():
     router = RegimeRouter(regime_path, strategies, hysteresis=2, default_regime="ranging")
     w = router.target_weights(panel)   # last panel date is past the path
     assert w.sum() == 0.0
+
+
+# --- risk gate (Regime v2) ----------------------------------------------------
+
+def test_risk_gate_overrides_regime_to_defensive_slot():
+    panel = _panel(6)
+    # regime path says trending (confirmed well past hysteresis)
+    regime_path = pd.Series(["trending"] * 6, index=panel.index)
+    strategies = {
+        "trending": _ConstStrategy("trending_stub", "TRN"),
+        "ranging": _ConstStrategy("ranging_stub", "RNG"),
+        "high_volatility": _ConstStrategy("vol_stub", "VOL"),
+    }
+    router = RegimeRouter(
+        regime_path, strategies, hysteresis=3, default_regime="ranging",
+        risk_gate=lambda prices_hist: True,
+    )
+    w = router.target_weights(panel)
+    # gate fires -> defensive (high_volatility slot) regardless of the HMM regime
+    assert w["VOL"] == 1.0
+    assert w["TRN"] == 0.0
+
+
+def test_risk_gate_false_preserves_normal_routing():
+    panel = _panel(6)
+    regime_path = pd.Series(["trending"] * 6, index=panel.index)
+    strategies = {
+        "trending": _ConstStrategy("trending_stub", "TRN"),
+        "ranging": _ConstStrategy("ranging_stub", "RNG"),
+        "high_volatility": _ConstStrategy("vol_stub", "VOL"),
+    }
+    router = RegimeRouter(
+        regime_path, strategies, hysteresis=3, default_regime="ranging",
+        risk_gate=lambda prices_hist: False,
+    )
+    w = router.target_weights(panel)
+    assert w["TRN"] == 1.0
+
+
+def test_risk_gate_receives_the_price_window():
+    panel = _panel(6)
+    regime_path = pd.Series(["trending"] * 6, index=panel.index)
+    strategies = {
+        "trending": _ConstStrategy("trending_stub", "TRN"),
+        "ranging": _ConstStrategy("ranging_stub", "RNG"),
+        "high_volatility": _ConstStrategy("vol_stub", "VOL"),
+    }
+    seen = {}
+
+    def gate(prices_hist):
+        seen["n"] = len(prices_hist)
+        return False
+
+    router = RegimeRouter(regime_path, strategies, risk_gate=gate)
+    router.target_weights(panel)
+    assert seen["n"] == 6
+
+
+def test_risk_gate_fires_even_before_regime_path_covers_date():
+    panel = _panel(4)
+    # path is empty: without a gate the router would hold cash
+    regime_path = pd.Series(dtype=object)
+    strategies = {
+        "trending": _ConstStrategy("trending_stub", "TRN"),
+        "ranging": _ConstStrategy("ranging_stub", "RNG"),
+        "high_volatility": _ConstStrategy("vol_stub", "VOL"),
+    }
+    router = RegimeRouter(regime_path, strategies, risk_gate=lambda p: True)
+    w = router.target_weights(panel)
+    assert w["VOL"] == 1.0
