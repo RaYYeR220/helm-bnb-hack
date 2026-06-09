@@ -22,6 +22,7 @@ from helm.data.cache import OHLCVCache, build_price_panel
 from helm.data.cmc import CMCAdapter
 from helm.data.universe import MAJORS
 from helm.regime.classifier import compute_regime_path
+from helm.regime.market_state import market_risk_off
 from helm.router.router import RegimeRouter
 from helm.strategies.baselines import EqualWeight
 from helm.strategies.defensive import Defensive
@@ -47,15 +48,23 @@ def format_metrics_table(results: dict) -> str:
     return "\n".join(lines)
 
 
-def build_router(regime_path) -> RegimeRouter:
-    """Map each regime label to its sub-strategy and wrap in the router."""
+def build_router(regime_path, risk_gate=None) -> RegimeRouter:
+    """Map each regime label to its sub-strategy and wrap in the router.
+
+    Ranging maps to the market portfolio (equal weight): when the regime is
+    uninformative, the neutral stance is broad exposure, not a concentrated
+    active bet. Naive cross-sectional mean reversion catches falling knives
+    (it bled -42% in the Aug-Oct 2025 top); it re-enters in Plan C gated on
+    on-chain accumulation confirmation. Plan D validates this across windows.
+    """
     strategies = {
         "trending": CrossSectionalMomentum(lookback=30, top_n=3),
-        "ranging": CrossSectionalMeanReversion(lookback=10, bottom_n=3),
+        "ranging": EqualWeight(),
         "high_volatility": Defensive(),
     }
     return RegimeRouter(
-        regime_path, strategies, hysteresis=3, default_regime="ranging"
+        regime_path, strategies, hysteresis=3, default_regime="ranging",
+        risk_gate=risk_gate,
     )
 
 
@@ -79,10 +88,10 @@ def main() -> None:
     print(regime_path.value_counts().to_string())
 
     cfg = BacktestConfig()
-    router = build_router(regime_path)
 
     strategies = {
-        "helm": router,
+        "helm": build_router(regime_path, risk_gate=market_risk_off),
+        "helm_ungated": build_router(regime_path),
         "momentum": CrossSectionalMomentum(lookback=30, top_n=3),
         "mean_reversion": CrossSectionalMeanReversion(lookback=10, bottom_n=3),
         "equal_weight": EqualWeight(),
