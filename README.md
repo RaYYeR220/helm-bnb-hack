@@ -252,9 +252,14 @@ Hub** special prize. The three sponsor-SDK touchpoints:
 - **CoinMarketCap Agent Hub — deep.** Live market data through the CMC MCP server
   *and* a native, format-correct Agent Hub Skill (`skill/helm-regime-read`) that
   composes Helm into any MCP-connected agent.
-- **BNB AI Agent SDK — next layer.** The agent-runtime + BSC integration wrapping
-  the engine for autonomous operation.
-- **Trust Wallet Agent Kit (TWAK) — next layer.** Self-custody (paper/sim)
-  execution to demonstrate the live path without entering the live-capital track.
+- **BNB AI Agent SDK — real.** Helm is wired as a hireable on-chain agent
+  (`onchain/`): ERC-8004 identity with discovery metadata, the full ERC-8183
+  job lifecycle (create → fund/escrow → submit → settle, plus dispute/refund),
+  keccak-committed deliverable manifests, and security-first keystore signing —
+  on BSC testnet, no real capital. See `onchain/README.md`.
+- **Trust Wallet Agent Kit (TWAK) — real.** The execution layer (`execution/`)
+  turns a RegimeRead into ordered rebalance intents and prices them through the
+  `twak` CLI with `--quote-only` — strategy decides, TWAK quotes, nothing is
+  ever broadcast. See `execution/README.md`.
 
 *This is research tooling, not financial advice.*
