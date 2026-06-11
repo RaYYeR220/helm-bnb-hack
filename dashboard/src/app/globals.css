@@ -1,0 +1,304 @@
+/* ============================================================================
+   HELM — instrument-deck theme
+   A ship's-bridge / sonar-display aesthetic: deep navy-black, phosphor teal,
+   amber caution, coral danger. Hairline grids, fine grain, glowing data lines.
+   ============================================================================ */
+
+:root {
+  /* Surfaces */
+  --bg: #070b10;
+  --bg-deep: #04070a;
+  --panel: #0c131b;
+  --panel-2: #101a24;
+  --line: rgba(120, 150, 170, 0.14);
+  --line-strong: rgba(120, 150, 170, 0.26);
+
+  /* Ink */
+  --ink: #e8eef2;
+  --ink-dim: #aebac4;
+  --mute: #7d8d99;
+  --faint: #4d5b66;
+
+  /* Signal colors */
+  --helm: #2ee6c8; /* phosphor teal */
+  --helm-deep: #14a892;
+  --amber: #f5a524; /* caution / gate */
+  --danger: #ff5d5d; /* drawdown / DQ */
+  --steel: #5b7fb0;
+  --violet: #9b8cff;
+  --sand: #c7a36a;
+
+  --glow-helm: 0 0 24px rgba(46, 230, 200, 0.35);
+  --maxw: 1180px;
+
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+/* Atmosphere: layered radial wash + a fine grid + grain overlay. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(1100px 700px at 78% -8%, rgba(46, 230, 200, 0.10), transparent 60%),
+    radial-gradient(900px 600px at 8% 12%, rgba(91, 127, 176, 0.10), transparent 55%),
+    radial-gradient(1200px 900px at 50% 120%, rgba(245, 165, 36, 0.05), transparent 60%),
+    var(--bg);
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.35;
+  background-image:
+    linear-gradient(rgba(120, 150, 170, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 150, 170, 0.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 30%, #000 40%, transparent 100%);
+}
+
+/* Grain texture via SVG noise. */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---- Typography ---- */
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.04;
+  margin: 0;
+  font-variation-settings: 'SOFT' 0, 'WONK' 0, 'opsz' 80;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-feature-settings: 'tnum' 1;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--helm);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+}
+
+.eyebrow::before {
+  content: '';
+  width: 26px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--helm), transparent);
+}
+
+a {
+  color: var(--helm);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---- Layout primitives ---- */
+.wrap {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+section {
+  position: relative;
+  padding: clamp(64px, 9vw, 128px) 0;
+  border-top: 1px solid var(--line);
+}
+
+.section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 44px;
+  max-width: 760px;
+}
+
+.section-head h2 {
+  font-size: clamp(28px, 4.4vw, 46px);
+}
+
+.section-lede {
+  color: var(--ink-dim);
+  font-size: clamp(15px, 1.7vw, 18px);
+  max-width: 720px;
+}
+
+/* Panels / cards */
+.panel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+    var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  position: relative;
+}
+
+.panel-pad {
+  padding: clamp(20px, 2.6vw, 30px);
+}
+
+/* corner ticks — instrument framing */
+.ticked::before,
+.ticked::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--line-strong);
+}
+.ticked::before {
+  top: -1px;
+  left: -1px;
+  border-right: none;
+  border-bottom: none;
+}
+.ticked::after {
+  bottom: -1px;
+  right: -1px;
+  border-left: none;
+  border-top: none;
+}
+
+.tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--mute);
+  white-space: nowrap;
+}
+.tag.good {
+  color: var(--helm);
+  border-color: rgba(46, 230, 200, 0.35);
+  background: rgba(46, 230, 200, 0.06);
+}
+.tag.warn {
+  color: var(--amber);
+  border-color: rgba(245, 165, 36, 0.35);
+  background: rgba(245, 165, 36, 0.06);
+}
+.tag.bad {
+  color: var(--danger);
+  border-color: rgba(255, 93, 93, 0.35);
+  background: rgba(255, 93, 93, 0.06);
+}
+
+/* number readouts */
+.readout {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.pos {
+  color: var(--helm);
+}
+.neg {
+  color: var(--danger);
+}
+
+/* ---- Reveal-on-scroll (CSS, no JS needed beyond IntersectionObserver hook) */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* recharts tooltip container reset */
+.recharts-default-tooltip {
+  background: var(--panel-2) !important;
+  border: 1px solid var(--line-strong) !important;
+  border-radius: 10px !important;
+}
+.recharts-cartesian-axis-tick text {
+  font-family: var(--font-mono);
+  fill: var(--mute);
+  font-size: 11px;
+}
+.recharts-text {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background: rgba(46, 230, 200, 0.28);
+  color: #fff;
+}
+
+/* scrollbar */
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+}
+::-webkit-scrollbar-thumb {
+  background: #1c2a36;
+  border-radius: 8px;
+  border: 2px solid var(--bg-deep);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2a3d4d;
+}

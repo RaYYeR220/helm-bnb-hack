@@ -197,6 +197,25 @@ block bootstrap) are independently tested.
 
 ---
 
+## Dashboard
+
+A static Next.js dashboard visualizes the real artifacts (equity curves with the
+regime timeline, the gate story, walk-forward OOS tables, DSR/bootstrap CIs, the
+DQ-survival chart, architecture):
+
+```bash
+cd dashboard
+npm install
+npm run dev            # local dev at localhost:3000
+npm run build          # static export to dashboard/out — servable anywhere
+```
+
+The committed `dashboard/public/data/*.json` are snapshots of `data_cache/`
+artifacts; refresh them after re-running the scripts with
+`node dashboard/scripts/sync-data.mjs`. Screenshots in [`docs/media/`](docs/media/).
+
+---
+
 ## Honest limitations
 
 We'd rather state these than have a judge find them:

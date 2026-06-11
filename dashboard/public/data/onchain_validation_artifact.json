@@ -1,0 +1,86 @@
+{
+  "panel": {
+    "days": 1094,
+    "symbols": [
+      "ETH",
+      "XRP",
+      "ADA",
+      "LINK",
+      "DOGE",
+      "AVAX",
+      "DOT",
+      "CAKE"
+    ]
+  },
+  "onchain_feature_cols": [
+    "tvl_mom20",
+    "tvl_dd",
+    "pancake_share_mom20"
+  ],
+  "dex_volume_coverage_days": 182,
+  "regime_value_counts": {
+    "baseline": {
+      "ranging": 811,
+      "high_volatility": 118,
+      "trending": 105
+    },
+    "tvl": {
+      "ranging": 697,
+      "trending": 199,
+      "high_volatility": 138
+    }
+  },
+  "selection": {
+    "oos": {
+      "total_return": 0.046884643364839905,
+      "total_return_median": 0.0,
+      "sharpe": 0.026249657283103113,
+      "sharpe_median": 0.0,
+      "sortino": 0.07818591426806236,
+      "sortino_median": 0.0,
+      "max_drawdown": -0.12645237102348203,
+      "max_drawdown_median": -0.14812957798346393
+    },
+    "n_trials": 3,
+    "selected_variant": "helm_gated_tvl"
+  },
+  "per_config_oos": {
+    "helm_gated": {
+      "mean_sharpe": 0.46946875281300726,
+      "mean_total_return": 0.14841985827811852,
+      "mean_max_drawdown": -0.12353556835702105
+    },
+    "helm_gated_tvl": {
+      "mean_sharpe": 0.5742769766759918,
+      "mean_total_return": 0.14019706773381946,
+      "mean_max_drawdown": -0.11621317821860079
+    },
+    "helm_gated_tvl_confirmed": {
+      "mean_sharpe": 0.5742769766759918,
+      "mean_total_return": 0.14019706773381946,
+      "mean_max_drawdown": -0.11621317821860079
+    },
+    "equal_weight": {
+      "mean_sharpe": 0.5251394125494486,
+      "mean_total_return": 0.16340877119258787,
+      "mean_max_drawdown": -0.41766343782271304
+    }
+  },
+  "deflated_sharpe": {
+    "value": 0.9352294250708535,
+    "n_trials": 3,
+    "sr_variance": 6.407831815628092e-08
+  },
+  "bootstrap": {
+    "sharpe": {
+      "lo": -0.32807700026050723,
+      "hi": 2.0649941217472794,
+      "point": 0.8895985367827234
+    },
+    "total_return": {
+      "lo": -0.3247860874696615,
+      "hi": 4.506280780831274,
+      "point": 0.8826548722494754
+    }
+  }
+}

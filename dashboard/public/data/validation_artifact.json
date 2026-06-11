@@ -1,0 +1,130 @@
+{
+  "panel": {
+    "days": 1094,
+    "symbols": [
+      "ETH",
+      "XRP",
+      "ADA",
+      "LINK",
+      "DOGE",
+      "AVAX",
+      "DOT",
+      "CAKE"
+    ]
+  },
+  "regime_value_counts": {
+    "ranging": 811,
+    "high_volatility": 118,
+    "trending": 105
+  },
+  "selection": {
+    "per_window": [
+      {
+        "window_id": 1.0,
+        "chosen": "helm_ungated",
+        "n_days": 182.0,
+        "total_return": 0.002558209213713969,
+        "sharpe": 0.3525112136166777,
+        "sortino": 0.4719810847097617,
+        "max_drawdown": -0.3874858966407385
+      },
+      {
+        "window_id": 2.0,
+        "chosen": "helm_ungated",
+        "n_days": 182.0,
+        "total_return": 0.7979509843531054,
+        "sharpe": 1.9385310089077898,
+        "sortino": 3.1831634380528384,
+        "max_drawdown": -0.36788563196374735
+      },
+      {
+        "window_id": 3.0,
+        "chosen": "helm_ungated",
+        "n_days": 182.0,
+        "total_return": -0.28560070682972694,
+        "sharpe": -0.3293392674768745,
+        "sortino": -0.46545939165699285,
+        "max_drawdown": -0.5218040627198146
+      },
+      {
+        "window_id": 4.0,
+        "chosen": "helm_gated",
+        "n_days": 182.0,
+        "total_return": 0.0,
+        "sharpe": 0.0,
+        "sortino": 0.0,
+        "max_drawdown": 0.0
+      },
+      {
+        "window_id": 5.0,
+        "chosen": "helm_ungated",
+        "n_days": 182.0,
+        "total_return": -0.37549076527720915,
+        "sharpe": -1.3873771084249815,
+        "sortino": -1.6644827452808522,
+        "max_drawdown": -0.4270900938826643
+      }
+    ],
+    "oos": {
+      "total_return": 0.027883544291976658,
+      "total_return_median": 0.0,
+      "sharpe": 0.11486516932452226,
+      "sharpe_median": 0.0,
+      "sortino": 0.3050404771649511,
+      "sortino_median": 0.0,
+      "max_drawdown": -0.3408531370413929,
+      "max_drawdown_median": -0.3874858966407385
+    },
+    "n_trials": 4,
+    "selected_variant": "helm_ungated"
+  },
+  "per_config_oos": {
+    "helm_gated": {
+      "mean_sharpe": 0.46946875281300726,
+      "mean_total_return": 0.14841985827811852,
+      "mean_max_drawdown": -0.12353556835702105
+    },
+    "helm_gate_confirm2": {
+      "mean_sharpe": 0.42320613001959884,
+      "mean_total_return": 0.1290671145563065,
+      "mean_max_drawdown": -0.11950176116497263
+    },
+    "helm_gate_confirm3": {
+      "mean_sharpe": 0.5538112536323224,
+      "mean_total_return": 0.12035044401015298,
+      "mean_max_drawdown": -0.11846799790167796
+    },
+    "helm_ungated": {
+      "mean_sharpe": 0.8428308572148948,
+      "mean_total_return": 0.25184624372545567,
+      "mean_max_drawdown": -0.36706763946458515
+    },
+    "momentum": {
+      "mean_sharpe": 0.3214961157052852,
+      "mean_total_return": 0.4066689544002715,
+      "mean_max_drawdown": -0.41857361529719395
+    },
+    "equal_weight": {
+      "mean_sharpe": 0.5251394125494486,
+      "mean_total_return": 0.16340877119258787,
+      "mean_max_drawdown": -0.41766343782271304
+    }
+  },
+  "deflated_sharpe": {
+    "value": 0.8676699256992144,
+    "n_trials": 4,
+    "sr_variance": 1.3007505918356232e-05
+  },
+  "bootstrap": {
+    "sharpe": {
+      "lo": -0.2072361561913592,
+      "hi": 1.7028086221715448,
+      "point": 0.715380611378741
+    },
+    "total_return": {
+      "lo": -0.6730086531735353,
+      "hi": 14.096121501698068,
+      "point": 1.151136714985943
+    }
+  }
+}
