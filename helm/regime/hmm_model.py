@@ -27,7 +27,13 @@ from helm.types import REGIMES
 
 
 class RegimeHMM:
-    def __init__(self, n_components: int = 3, seed: int = 0, n_restarts: int = 8):
+    def __init__(
+        self,
+        n_components: int = 3,
+        seed: int = 0,
+        n_restarts: int = 8,
+        feature_cols: list[str] | None = None,
+    ):
         self.n_components = n_components
         self.seed = seed
         self.n_restarts = n_restarts
@@ -35,7 +41,12 @@ class RegimeHMM:
         self._scaler: StandardScaler | None = None
         self._state_to_label: dict[int, str] = {}
         self._signatures: dict[str, dict] = {}
-        self._feature_cols = list(FEATURE_COLS)
+        # Default -> the four market features (bit-identical to the old behavior);
+        # callers may pass FEATURE_COLS + extra on-chain columns. Labeling still
+        # keys off realized_vol / trend_strength, so extra columns are safe.
+        self._feature_cols = (
+            list(FEATURE_COLS) if feature_cols is None else list(feature_cols)
+        )
 
     def _fit_best(self, Xz: np.ndarray) -> GaussianHMM:
         """Fit n_restarts HMMs over a deterministic seed range; keep the best
