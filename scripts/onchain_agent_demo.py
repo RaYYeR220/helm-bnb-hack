@@ -29,6 +29,10 @@ import json
 import os
 import sys
 
+from dotenv import load_dotenv
+
+load_dotenv()  # keystore password (HELM_AGENT_WALLET_PASSWORD) comes from .env
+
 # Keystore lives under the gitignored data_cache/ tree by default.
 DEFAULT_KEYSTORE_DIR = os.path.join("data_cache", "keystore")
 

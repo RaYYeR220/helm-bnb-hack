@@ -126,26 +126,43 @@ domain or unbounded Permit — defense against blind-sign attacks.
 
 ---
 
-## What was verified live on BSC testnet (Phase-1 spike)
+## Verified live on BSC testnet — Helm is a registered on-chain agent
 
-The full SDK code path was exercised **live** against `bsc-testnet` (chain 97):
+Helm is **registered and confirmed on-chain** on `bsc-testnet` (chain 97):
 
-- **Fresh wallet generated + encrypted** to the gitignored keystore
-  (`EVMWalletProvider`, Keystore V3, `SigningPolicy.strict_default`):
-  address `0x39091D68C99016E348f49BB2c7f4343F3D3e8aeD`.
-- **Connected** to the testnet registry `0x8004A818BFB912233c491871b3d84c89A494BD9e`;
-  the SDK's RPC chain-id verification passed.
-- **`generate_agent_uri`** produced the EIP-8004 discovery card.
-- **`register_agent`** broadcast a real registration transaction via the MegaFuel
-  paymaster: tx hash `0xa39f1b5b45ad9e03d8d9438db0953367da7d306372834808975077e7914bf4dc`.
+| | |
+| --- | --- |
+| **Agent ID** | **1368** |
+| **Agent wallet** | `0xf90635d961B53Aa2E1314d05baBd95525aee51fA` |
+| **Registration tx** | `0x573cedf22fe0ad3680ac4ca1df778b3c48c0922d47c035ff7606877d753d1625` |
+| **Receipt** | status `1` (success), block `112821096` |
+| **Identity Registry** | `0x8004A818BFB912233c491871b3d84c89A494BD9e` (EIP-8004) |
 
-**Honest outcome:** the wallet was unfunded (0 tBNB) and the gas-free MegaFuel
-sponsorship did not land the transaction — it timed out (*"not in the chain after
-300 seconds"*) and a follow-up receipt lookup returned `TransactionNotFound`.
-Registration on this deployment requires either MegaFuel allowlisting for the
-sender or a tBNB-funded wallet to self-pay gas. The SDK integration itself is
-complete and correct; only the on-chain settlement of the registration tx is
-gated on faucet/sponsorship access. Everything else — identity card, the full
-ERC-8183 lifecycle, deliverable manifesting + hash verification, the provider
-poll loop, and the signing policy — is wired against the real SDK and covered by
-33 offline tests that fake the SDK client objects at injection seams.
+Verify it yourself:
+
+```bash
+# the registration receipt (status 0x1)
+curl -s https://data-seed-prebsc-1-s1.bnbchain.org:8545 -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"eth_getTransactionReceipt","params":["0x573cedf22fe0ad3680ac4ca1df778b3c48c0922d47c035ff7606877d753d1625"]}'
+# or on the explorer
+# https://testnet.bscscan.com/tx/0x573cedf22fe0ad3680ac4ca1df778b3c48c0922d47c035ff7606877d753d1625
+```
+
+What ran, live:
+
+- **Fresh wallet** generated + encrypted to the gitignored keystore
+  (`EVMWalletProvider`, Keystore V3, `SigningPolicy.strict_default`).
+- **`generate_agent_uri`** produced the EIP-8004 discovery card (base64 `data:`
+  URI with the ERC-8183 service endpoint), embedded in the on-chain registration.
+- **`register_agent`** broadcast and **landed gas-free via the MegaFuel
+  paymaster** — the wallet paid nothing; the tx is final at block 112821096.
+- **Idempotent**: re-running `--register` reports the existing `agent_id=1368`
+  via `get_local_agent_info` instead of duplicating.
+
+The ERC-8183 commerce loop (`create_job` → `fund` → `submit` → `settle` /
+`dispute` / `claim_refund`), deliverable manifesting + keccak hash verification,
+the provider poll loop, the `LocalStorageProvider`, and the strict `SigningPolicy`
+are all wired against the real SDK and covered by **33 offline tests** that fake
+the SDK client at injection seams. The `--serve` / `--hire` escrow round-trip is
+human-run and needs the wallet funded with the escrow token (the registration
+above is gas-free; escrow is not).
