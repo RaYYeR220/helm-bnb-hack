@@ -15,6 +15,9 @@ dependencies = [
 ]
 
 [dependency-groups]
+agent = [
+    "bnbagent[server]>=0.3.6",
+]
 dev = [
     "pytest>=8",
     "respx>=0.21",
