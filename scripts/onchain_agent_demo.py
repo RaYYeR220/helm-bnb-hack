@@ -111,6 +111,11 @@ def cmd_hire(args: argparse.Namespace) -> None:
         budget_raw=args.budget,
         wallets_dir=ks,
         on_event=_print_event,
+        # same-machine demo opt-ins for the deliverable fetcher: file:// reads
+        # are sandboxed to the provider's storage dir; localhost http allowed
+        # only when explicitly flagged.
+        fetch_sandbox_dir=args.storage_dir,
+        allow_local_http=args.allow_local_fetch,
     )
     print("\n=== Lifecycle trace ===")
     print(json.dumps(trace, indent=2, default=str))
@@ -130,6 +135,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--storage-dir", default=None, help="deliverable storage dir")
     p.add_argument("--agent-id", type=int, default=None, help="Helm's ERC-8004 agent id (hire)")
     p.add_argument("--budget", type=int, default=10**18, help="escrow budget in raw token units")
+    p.add_argument(
+        "--allow-local-fetch",
+        action="store_true",
+        help="allow the buyer to fetch deliverables from localhost/private hosts "
+        "(same-machine demo only; off by default)",
+    )
     return p
 
 

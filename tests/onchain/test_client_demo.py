@@ -217,7 +217,45 @@ def test_hire_helm_hash_verifies_when_manifest_fetchable(tmp_path, monkeypatch):
     import json as _json
 
     manifest_file.write_text(_json.dumps(m.to_dict()), encoding="utf-8")
-    file_url = f"file://{manifest_file}"
+    file_url = manifest_file.as_uri()
+
+    class _VerifyClient(_FakeClient):
+        def get_deliverable_url(self, job_id):
+            return file_url
+
+        def get_job(self, job_id):
+            job = super().get_job(job_id)
+            return Job(
+                id=job.id, client=job.client, provider=job.provider,
+                evaluator=job.evaluator, description=job.description,
+                budget=job.budget, expired_at=job.expired_at,
+                status=JobStatus.SUBMITTED, hook=job.hook,
+                deliverable=on_chain, submitted_at=1,
+            )
+
+    fake = _VerifyClient(status_timeline=[JobStatus.SUBMITTED])
+    trace = hire_helm(
+        provider_address="0xHELM",
+        wallet_password="pw",
+        client_factory=lambda: fake,
+        poll_interval_s=0,
+        # file:// deliverables are only honored inside an explicit sandbox dir
+        fetch_sandbox_dir=str(tmp_path),
+    )
+    assert trace["deliverable"]["verified"] is True
+
+
+def test_hire_helm_refuses_file_manifest_outside_sandbox(tmp_path):
+    # Same setup but WITHOUT the sandbox opt-in: the buyer must refuse the
+    # provider-supplied file:// URL and leave the deliverable unverified.
+    m = _manifest("regime-read-payload")
+    on_chain = m.manifest_hash()
+
+    manifest_file = tmp_path / "deliverable.json"
+    import json as _json
+
+    manifest_file.write_text(_json.dumps(m.to_dict()), encoding="utf-8")
+    file_url = manifest_file.as_uri()
 
     class _VerifyClient(_FakeClient):
         def get_deliverable_url(self, job_id):
@@ -240,7 +278,8 @@ def test_hire_helm_hash_verifies_when_manifest_fetchable(tmp_path, monkeypatch):
         client_factory=lambda: fake,
         poll_interval_s=0,
     )
-    assert trace["deliverable"]["verified"] is True
+    assert trace["deliverable"]["submitted"] is True
+    assert trace["deliverable"]["verified"] is False
 
 
 # --------------------------------------------------------------------------- #

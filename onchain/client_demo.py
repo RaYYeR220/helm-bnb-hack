@@ -146,6 +146,8 @@ def hire_helm(
     wallets_dir: str | None = None,
     client_factory: Any | None = None,
     on_event: Any | None = None,
+    fetch_sandbox_dir: str | None = None,
+    allow_local_http: bool = False,
 ) -> dict[str, Any]:
     """Run the full buyer lifecycle: create -> fund -> await -> settle.
 
@@ -153,6 +155,8 @@ def hire_helm(
     hash-verification result, final status). ``client_factory`` returns an
     ``ERC8183Client``-shaped object (test seam); ``on_event`` is an optional
     ``(stage, detail)`` progress callback for the demo CLI.
+    ``fetch_sandbox_dir``/``allow_local_http`` are the explicit same-machine
+    demo opt-ins for the deliverable fetcher (see ``_fetch_manifest``).
     """
     log = on_event or (lambda stage, detail: None)
     client = _build_client(
@@ -191,7 +195,13 @@ def hire_helm(
 
     # 4) await the deliverable — poll until SUBMITTED, then hash-verify
     deliverable = _await_deliverable(
-        client, job_id, timeout_s=await_timeout_s, interval_s=poll_interval_s, log=log
+        client,
+        job_id,
+        timeout_s=await_timeout_s,
+        interval_s=poll_interval_s,
+        log=log,
+        fetch_sandbox_dir=fetch_sandbox_dir,
+        allow_local_http=allow_local_http,
     )
     trace["deliverable"] = deliverable
     trace["steps"].append({"stage": "await", **deliverable})
@@ -213,6 +223,8 @@ def _await_deliverable(
     timeout_s: int,
     interval_s: int,
     log: Any,
+    fetch_sandbox_dir: str | None = None,
+    allow_local_http: bool = False,
 ) -> dict[str, Any]:
     """Poll job status until SUBMITTED/COMPLETED, then fetch + hash-verify.
 
@@ -245,32 +257,115 @@ def _await_deliverable(
     try:
         on_chain_hash = bytes(client.get_job(job_id).deliverable)
         if url:
-            manifest = _fetch_manifest(url)
+            manifest = _fetch_manifest(
+                url,
+                fetch_sandbox_dir=fetch_sandbox_dir,
+                allow_local_http=allow_local_http,
+            )
             if manifest is not None:
                 out["verified"] = verify_deliverable(manifest, on_chain_hash)
-    except Exception as exc:  # noqa: BLE001 - verification is best-effort in demo
-        out["verify_error"] = str(exc)
+    except Exception:  # noqa: BLE001 - best-effort; no exception detail in the trace
+        out["verify_error"] = "verification-failed"
     return out
 
 
-def _fetch_manifest(url: str) -> dict[str, Any] | None:
-    """Fetch a deliverable manifest JSON from a file://, http(s)://, or ipfs:// URL."""
+# The deliverable URL arrives from on-chain optParams — provider-controlled
+# input. Treat it as hostile: no file reads outside an opted-in sandbox, no
+# requests to private/loopback hosts unless explicitly allowed (same-machine
+# demo), and a hard cap on the bytes read.
+MAX_MANIFEST_BYTES = 1_000_000
+
+
+def _is_private_ip(ip: str) -> bool:
+    """True for loopback / private / link-local / reserved addresses."""
+    import ipaddress
+
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return True  # unparseable -> treat as unsafe
+    return (
+        addr.is_private
+        or addr.is_loopback
+        or addr.is_link_local
+        or addr.is_reserved
+        or addr.is_multicast
+        or addr.is_unspecified
+    )
+
+
+def _resolve_host_ips(host: str) -> list[str]:
+    """All IPs a hostname resolves to (seam for tests)."""
+    import socket
+
+    return [info[4][0] for info in socket.getaddrinfo(host, None)]
+
+
+def _urlopen(url: str, timeout: float):
+    """Thin urlopen seam for tests."""
+    import urllib.request
+
+    return urllib.request.urlopen(url, timeout=timeout)  # noqa: S310 - guarded by caller
+
+
+def _fetch_manifest(
+    url: str,
+    *,
+    fetch_sandbox_dir: str | None = None,
+    allow_local_http: bool = False,
+) -> dict[str, Any] | None:
+    """Fetch a deliverable manifest JSON from a provider-supplied URL, safely.
+
+    - ``file://`` is honored only when ``fetch_sandbox_dir`` is set AND the
+      resolved path stays inside that directory (the single-machine demo opts
+      in by pointing this at the provider's local storage dir).
+    - ``http(s)://`` hosts resolving to private/loopback/link-local IPs are
+      refused unless ``allow_local_http=True`` (explicit same-machine opt-in).
+    - Reads are capped at ``MAX_MANIFEST_BYTES``; anything larger is refused.
+    Returns None on any refusal or parse failure (verification then simply
+    does not upgrade to verified=True; no exception detail leaks to the trace).
+    """
     import json
     from urllib.parse import urlparse
 
     parsed = urlparse(url)
+
     if parsed.scheme == "file":
+        if fetch_sandbox_dir is None:
+            return None
         from pathlib import Path
+        from urllib.request import url2pathname
 
-        path = url[7:]
-        return json.loads(Path(path).read_text(encoding="utf-8"))
+        try:
+            sandbox = Path(fetch_sandbox_dir).resolve()
+            target = Path(url2pathname(parsed.path)).resolve()
+            if not target.is_relative_to(sandbox):
+                return None
+            if target.stat().st_size > MAX_MANIFEST_BYTES:
+                return None
+            return json.loads(target.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001 - refuse on any failure, leak nothing
+            return None
+
     if parsed.scheme in ("http", "https"):
-        import urllib.request
+        try:
+            host = parsed.hostname or ""
+            ips = _resolve_host_ips(host)
+            if not ips or (
+                any(_is_private_ip(ip) for ip in ips) and not allow_local_http
+            ):
+                return None
+            with _urlopen(url, timeout=15) as resp:
+                length = resp.headers.get("Content-Length")
+                if length is not None and int(length) > MAX_MANIFEST_BYTES:
+                    return None
+                raw = resp.read(MAX_MANIFEST_BYTES + 1)
+                if len(raw) > MAX_MANIFEST_BYTES:
+                    return None
+            return json.loads(raw.decode("utf-8"))
+        except Exception:  # noqa: BLE001 - refuse on any failure, leak nothing
+            return None
 
-        with urllib.request.urlopen(url, timeout=15) as resp:  # noqa: S310 - demo
-            data = json.loads(resp.read().decode("utf-8"))
-        # The agent server wraps the manifest under success; unwrap if present.
-        return data.get("response") and data or data
     return None  # ipfs:// etc. left to the operator's gateway in the live demo
 
 
