@@ -56,6 +56,37 @@ def dex_volume_panel(cache, symbols: list[str]) -> pd.DataFrame:
     return panel[ordered]
 
 
+def backfill_dex_volumes(gt, cache, symbols, addresses, limit: int = 182) -> list:
+    """Cache-first per-token DEX-volume backfill; returns summary rows.
+
+    Symbols with a non-empty cached ``dexvol_{sym}`` series are skipped (the
+    GeckoTerminal free tier rate-limits hard; a rerun after a 429 must not
+    re-burn quota on already-fetched tokens)."""
+    summary = []
+    for sym in symbols:
+        cached = cache.get_series(f"dexvol_{sym}")
+        if cached is not None and len(cached) > 0:
+            summary.append((sym, "cached", len(cached), float(cached.iloc[-1])))
+            continue
+        addr = addresses.get(sym)
+        if addr is None:
+            summary.append((sym, "no-address", 0, 0.0))
+            continue
+        pool = gt.token_top_pool(addr)
+        if pool is None:
+            summary.append((sym, "no-pool", 0, 0.0))
+            continue
+        ohlcv = gt.pool_ohlcv_daily(pool["pool_address"], limit=limit)
+        if ohlcv.empty:
+            summary.append((sym, pool["pool_address"][:10], 0, 0.0))
+            continue
+        vol = ohlcv["volume"].rename("volume")
+        cache.put_series(f"dexvol_{sym}", vol)
+        latest = float(vol.iloc[-1])
+        summary.append((sym, pool["pool_address"][:10], len(vol), latest))
+    return summary
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Backfill BSC on-chain data")
     parser.add_argument(
@@ -66,26 +97,9 @@ def main() -> None:
 
     cache = OnchainCache()
 
-    # --- per-token DEX volume -------------------------------------------------
-    summary = []
+    # --- per-token DEX volume (cache-first) -------------------------------------
     with GeckoTerminalAdapter() as gt:
-        for sym in MAJORS:
-            addr = BSC_TOKEN_ADDRESSES.get(sym)
-            if addr is None:
-                summary.append((sym, "no-address", 0, 0.0))
-                continue
-            pool = gt.token_top_pool(addr)
-            if pool is None:
-                summary.append((sym, "no-pool", 0, 0.0))
-                continue
-            ohlcv = gt.pool_ohlcv_daily(pool["pool_address"], limit=limit)
-            if ohlcv.empty:
-                summary.append((sym, pool["pool_address"][:10], 0, 0.0))
-                continue
-            vol = ohlcv["volume"].rename("volume")
-            cache.put_series(f"dexvol_{sym}", vol)
-            latest = float(vol.iloc[-1])
-            summary.append((sym, pool["pool_address"][:10], len(vol), latest))
+        summary = backfill_dex_volumes(gt, cache, MAJORS, BSC_TOKEN_ADDRESSES, limit)
 
     # --- TVL series -----------------------------------------------------------
     with DefiLlamaAdapter() as llama:

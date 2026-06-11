@@ -121,3 +121,30 @@ def test_default_min_interval_is_three_seconds():
     # documents the free-tier safe cadence without making a network call
     a = GeckoTerminalAdapter()
     assert a.min_interval_s == 3.0
+
+
+@respx.mock
+def test_429_is_retried_with_backoff_then_succeeds():
+    addr = "0x2170ed0880ac9a755fd29b2688956bd959f933f8"
+    route = respx.get(f"{BASE}/networks/bsc/tokens/{addr}/pools").mock(
+        side_effect=[
+            httpx.Response(429, headers={"Retry-After": "0"}),
+            httpx.Response(200, json=_pools_body()),
+        ]
+    )
+    gt = GeckoTerminalAdapter(min_interval_s=0, backoff_s=0)
+    pool = gt.token_top_pool(addr)
+    assert route.call_count == 2
+    assert pool is not None
+
+
+@respx.mock
+def test_429_exhausts_retries_then_raises():
+    addr = "0x2170ed0880ac9a755fd29b2688956bd959f933f8"
+    respx.get(f"{BASE}/networks/bsc/tokens/{addr}/pools").mock(
+        return_value=httpx.Response(429, headers={"Retry-After": "0"})
+    )
+    gt = GeckoTerminalAdapter(min_interval_s=0, backoff_s=0, max_retries=2)
+    import pytest as _pytest
+    with _pytest.raises(httpx.HTTPStatusError):
+        gt.token_top_pool(addr)

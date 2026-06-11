@@ -39,9 +39,13 @@ class GeckoTerminalAdapter:
         client: httpx.Client | None = None,
         timeout: float = 30.0,
         min_interval_s: float = 3.0,
+        max_retries: int = 3,
+        backoff_s: float = 60.0,
     ):
         self.base_url = base_url.rstrip("/")
         self.min_interval_s = min_interval_s
+        self.max_retries = max_retries
+        self.backoff_s = backoff_s
         self._owns_client = client is None
         self._client = client or httpx.Client(
             timeout=timeout,
@@ -68,11 +72,25 @@ class GeckoTerminalAdapter:
             time.sleep(wait)
 
     def _get(self, path: str, params: dict | None = None) -> dict:
-        self._throttle()
-        resp = self._client.get(f"{self.base_url}{path}", params=params)
-        self._last_call_at = time.monotonic()
-        resp.raise_for_status()
-        return resp.json()
+        """GET with throttle + 429 retry.
+
+        The free tier rate-limits aggressively (a global per-minute counter,
+        not just burst). On 429 we honor ``Retry-After`` when present, else
+        wait ``backoff_s`` (scaled by attempt), up to ``max_retries`` waits."""
+        attempt = 0
+        while True:
+            self._throttle()
+            resp = self._client.get(f"{self.base_url}{path}", params=params)
+            self._last_call_at = time.monotonic()
+            if resp.status_code == 429 and attempt < self.max_retries:
+                attempt += 1
+                retry_after = _to_float(resp.headers.get("Retry-After"))
+                wait = retry_after if retry_after > 0 else self.backoff_s * attempt
+                if wait > 0:
+                    time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            return resp.json()
 
     def token_top_pool(
         self, token_address: str, network: str = "bsc"
