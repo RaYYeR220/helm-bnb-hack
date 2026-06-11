@@ -44,13 +44,21 @@ Skills**, targeting the **Best Use of Agent Hub** special prize.
 Walk-forward, 3 years, 8 BSC majors (ETH, XRP, ADA, LINK, DOGE, AVAX, DOT,
 CAKE), out-of-sample window means:
 
-| Variant | OOS Sharpe | Max drawdown |
-| --- | ---: | ---: |
-| **helm_gated_tvl** (regime + TVL fusion + risk-off gate) | **+0.57** | **−11.6%** |
-| equal-weight market | — | −41.8% |
+| Variant | OOS Sharpe | OOS total | Max drawdown |
+| --- | ---: | ---: | ---: |
+| **helm_gated_tvl** (regime + TVL fusion + risk-off gate) | **+0.57** | +14.0% | **−11.6%** |
+| helm_gated (no TVL fusion) | +0.47 | +14.8% | −12.4% |
+| equal-weight market | +0.53 | +16.3% | −41.8% |
 
+- **The honest read:** on risk-adjusted return Helm and the market are
+  comparable — the edge is the **drawdown profile**: −11.6% vs −41.8%, a 3.6×
+  smaller worst loss for the same Sharpe class. That is the whole thesis:
+  regime-switching is survival engineering, not return chasing.
 - **The risk gate held cash through an 8-month bear** — the −11.6% max drawdown
   vs the market's −41.8% is the gate doing its job, not a curve-fit.
+- **The TVL fusion is a measured improvement** (+0.10 OOS Sharpe over the
+  ungated-feature variant, and 2× better trend detection in the regime path) —
+  validated through the same walk-forward harness, not eyeballed.
 - **Deflated Sharpe Ratio = 0.935**, computed with the true trial count (3 Helm
   variants) — i.e. the edge survives a correction for selection over the
   variants we tried.
