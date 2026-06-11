@@ -22,10 +22,13 @@ class RunnerSpy:
         return (self.code, self.stdout, self.stderr)
 
 
-def test_quote_swap_builds_quote_only_argv_with_aliases():
+def test_quote_swap_builds_quote_only_argv_resolving_bsc_tokens():
     spy = RunnerSpy(stdout=json.dumps({"toAmount": "0.01"}))
     out = TwakAdapter(runner=spy).quote_swap(1.5, "ETH", "BNB")
-    assert spy.argv[:4] == ["swap", "1.5", "WETH", "WBNB"]
+    # ETH -> its BSC contract address; BNB -> WBNB
+    assert spy.argv[:2] == ["swap", "1.5"]
+    assert spy.argv[2] == "0x2170ed0880ac9a755fd29b2688956bd959f933f8"
+    assert spy.argv[3] == "WBNB"
     assert "--quote-only" in spy.argv and "--json" in spy.argv
     assert "--password" not in spy.argv  # never executes
     assert out["ok"] is True
@@ -35,8 +38,10 @@ def test_quote_swap_builds_quote_only_argv_with_aliases():
 def test_quote_swap_usd_mode_uses_usd_flag():
     spy = RunnerSpy(stdout=json.dumps({"toAmount": "0.5"}))
     out = TwakAdapter(runner=spy).quote_swap_usd(50.0, "CAKE", "WBNB")
-    # usd mode: 2 token args + --usd <amount>, no leading token amount
-    assert spy.argv[:3] == ["swap", "CAKE", "WBNB"]
+    # usd mode: 2 token args + --usd <amount>; CAKE -> its BSC contract address
+    assert spy.argv[0] == "swap"
+    assert spy.argv[1] == "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82"
+    assert spy.argv[2] == "WBNB"
     i = spy.argv.index("--usd")
     assert spy.argv[i + 1] == "50"
     assert "--quote-only" in spy.argv
@@ -84,3 +89,17 @@ def test_json_parse_tolerates_banner_noise():
     out = TwakAdapter(runner=spy).quote_swap(1, "CAKE", "WBNB")
     assert out["ok"] is True
     assert out["quote"]["toAmount"] == "1"
+
+
+def test_bsc_major_symbol_resolves_to_contract_address():
+    spy = RunnerSpy(stdout="{}")
+    TwakAdapter(runner=spy).quote_swap_usd(100, "WBNB", "CAKE")
+    # CAKE on bsc must be passed as its BEP-20 contract address, not "CAKE"
+    assert "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82" in spy.argv
+    assert "CAKE" not in spy.argv
+
+
+def test_unknown_symbol_passes_through_uppercased():
+    spy = RunnerSpy(stdout="{}")
+    TwakAdapter(runner=spy).quote_swap_usd(100, "WBNB", "wbtc")
+    assert "WBTC" in spy.argv

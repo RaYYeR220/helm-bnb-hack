@@ -16,9 +16,14 @@ import argparse
 import json
 
 import pandas as pd
+from dotenv import load_dotenv
 
 from execution.intents import regime_to_execution_plan
 from execution.twak_adapter import TwakAdapter
+
+# TWAK reads TWAK_ACCESS_ID / TWAK_HMAC_SECRET from the environment; loading .env
+# here propagates them into os.environ, which the twak subprocess inherits.
+load_dotenv()
 
 # Canned read for --offline: a trending regime, gate clear, so the demo shows
 # actual intents + quotes rather than a hold.

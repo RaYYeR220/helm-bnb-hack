@@ -33,11 +33,16 @@ uv run python scripts/execution_demo.py             # live read (CMC key)
   skills docs is not exposed by 0.19.0).
 - `twak swap <amt> <from> <to> --chain bsc --quote-only --json` is the real
   quote command; `--usd <amount>` quotes a USD-equivalent notional.
-- **Quotes are credential-gated**: without Trust Wallet API credentials
-  (`twak setup`, or `TWAK_ACCESS_ID` + `TWAK_HMAC_SECRET` env vars from
-  [portal.trustwallet.com](https://portal.trustwallet.com)) the CLI returns
-  `{"error": "No API credentials found...", "errorCode": "VALIDATION_ERROR"}`.
-  The demo surfaces that honestly per intent instead of pretending.
+- **Live quotes work with credentials.** With `TWAK_ACCESS_ID` +
+  `TWAK_HMAC_SECRET` (from [portal.trustwallet.com](https://portal.trustwallet.com),
+  loaded from `.env`), the demo fetches real PancakeSwap quotes — e.g. a
+  $3,333 momentum buy returns `5.5158 WBNB -> 2473.18 CAKE` with a `minReceived`
+  slippage floor. Without creds the CLI returns
+  `{"error": "No API credentials found...", "errorCode": "VALIDATION_ERROR"}`
+  and the demo surfaces that honestly per intent.
+- **On `bsc`, Helm majors are passed as BEP-20 contract addresses.** The CLI
+  resolves only a small builtin symbol set; `CAKE`/`ETH`/`LINK`/… are mapped to
+  their contracts (`BSC_MAJOR_ADDRESSES`) so the quote resolves.
 
 ## The path to live execution (not enabled, deliberately)
 

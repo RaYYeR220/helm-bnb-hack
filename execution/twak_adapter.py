@@ -21,19 +21,20 @@ What the spike verified live (Windows, ``twak`` v0.19.0, 2026-06-11)
   ``bsctestnet`` entry in this CLI version).
 - ``twak swap <amt> <from> <to> --chain bsc --quote-only --json`` is the real
   quote command, and ``--json`` is supported.
-- **Every data / swap / wallet-create command requires API credentials**
-  (``TWAK_ACCESS_ID`` + ``TWAK_HMAC_SECRET``, set via ``twak auth setup`` or
-  env). Without them the CLI returns, on stdout, JSON:
-  ``{"error": "...No API credentials found...", "errorCode": "VALIDATION_ERROR"}``
-  and a non-zero exit. We could therefore *not* fetch a live quote on this
-  machine (no Trust Wallet account creds). The adapter parses both the success
-  and the error shape; the demo reports the credential gap honestly.
+- Data / swap commands require API credentials (``TWAK_ACCESS_ID`` +
+  ``TWAK_HMAC_SECRET``, via ``twak setup`` or env). With credentials present,
+  ``swap ... --quote-only --json`` returns a real quote, e.g.
+  ``{"input": "5.5158 WBNB", "output": "2473.18 CAKE", "minReceived": "2448.45 CAKE", "provider": ...}``.
+  Without them it returns ``{"error": "...No API credentials found...",
+  "errorCode": "VALIDATION_ERROR"}`` and a non-zero exit. The adapter parses both
+  shapes; the demo reports either outcome honestly.
+- On ``bsc`` the CLI resolves only a small builtin symbol set; the Helm majors
+  (CAKE, ETH, LINK, ...) must be passed as BEP-20 **contract addresses** (see
+  ``BSC_MAJOR_ADDRESSES`` / ``_resolve_token``) or the CLI returns
+  ``Unknown token: <SYM> on bsc``.
 
-Because the live quote was credential-gated, the JSON success shape parsed here
-follows the documented ``twak swap`` output (a quote object with ``fromAmount`` /
-``toAmount`` / ``provider`` / ``priceImpact``-style fields). The parser is
-defensive: it surfaces whatever the quote object contains and never assumes a
-field is present.
+The parser is defensive: it surfaces whatever the quote object contains and never
+assumes a field is present.
 """
 
 from __future__ import annotations
@@ -48,12 +49,36 @@ from collections.abc import Callable, Sequence
 Runner = Callable[[Sequence[str]], "tuple[int, str, str]"]
 
 # Map Helm universe symbols -> the on-chain tradable symbol the CLI understands.
-# Native coins are wrapped (ETH->WETH, BNB->WBNB) since DEX swaps trade wrapped
-# ERC-20s. Symbols already tradable as ERC-20 (CAKE, LINK, ...) pass through.
+# Native coins are wrapped (BNB->WBNB) since DEX swaps trade wrapped ERC-20s.
 SYMBOL_ALIASES = {
-    "ETH": "WETH",
     "BNB": "WBNB",
 }
+
+# BEP-20 contract addresses for the Helm BSC-major universe. twak on `bsc`
+# resolves only a small builtin symbol set; everything else must be passed as a
+# 0x contract address ("Unknown token: CAKE on bsc. Use a contract address...").
+# These are the same wrapped/peg contracts the on-chain backfill uses.
+BSC_MAJOR_ADDRESSES = {
+    "CAKE": "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82",
+    "ETH": "0x2170ed0880ac9a755fd29b2688956bd959f933f8",
+    "XRP": "0x1d2f0da169ceb9fc7b3144628db156f3f6c60dbe",
+    "ADA": "0x3ee2200efb3400fabb9aacf31297cbdd1d435d47",
+    "DOGE": "0xba2ae424d960c26247dd6c32edc70b295c744c43",
+    "LINK": "0xf8a0bf9cf54bb92f17374d9e9a321e6a111a51bd",
+    "DOT": "0x7083609fce4d1d8dc0c979aab8c869ea2c873402",
+    "AVAX": "0x1ce0c2827e2ef14d5c4f29a091d735a204794041",
+}
+
+
+def _resolve_token(sym: str, chain: str) -> str:
+    """Token argument for the CLI: a BSC-major contract address on ``bsc``,
+    else the alias-mapped, uppercased symbol."""
+    up = sym.upper()
+    if up.startswith("0X"):
+        return sym  # already a contract address
+    if chain == "bsc" and up in BSC_MAJOR_ADDRESSES:
+        return BSC_MAJOR_ADDRESSES[up]
+    return SYMBOL_ALIASES.get(up, up)
 
 # Default quote asset for a buy/sell notional on BSC: WBNB is the canonical
 # pair leg on PancakeSwap. The demo swaps <asset> <-> WBNB for the quote.
@@ -145,8 +170,8 @@ class TwakAdapter:
         successful quote is that object; a failure is
         ``{"error", "errorCode"}`` (the credential-gate shape the spike hit).
         """
-        from_t = SYMBOL_ALIASES.get(from_sym.upper(), from_sym.upper())
-        to_t = SYMBOL_ALIASES.get(to_sym.upper(), to_sym.upper())
+        from_t = _resolve_token(from_sym, self.chain)
+        to_t = _resolve_token(to_sym, self.chain)
         argv = [
             "swap",
             _fmt_amount(amount),
@@ -208,8 +233,8 @@ class TwakAdapter:
         This matches Helm's intents, which are denominated in USD notional
         (``usd_amount`` from ``weights_to_intents``). Same safety + return
         contract as :meth:`quote_swap`."""
-        from_t = SYMBOL_ALIASES.get(from_sym.upper(), from_sym.upper())
-        to_t = SYMBOL_ALIASES.get(to_sym.upper(), to_sym.upper())
+        from_t = _resolve_token(from_sym, self.chain)
+        to_t = _resolve_token(to_sym, self.chain)
         argv = [
             "swap",
             from_t,
