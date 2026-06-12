@@ -7,3 +7,4 @@ load_dotenv()
 
 CMC_API_KEY = os.getenv("CMC_API_KEY", "")
 CMC_BASE_URL = os.getenv("CMC_BASE_URL", "https://pro-api.coinmarketcap.com")
+BITQUERY_API_KEY = os.getenv("BITQUERY_API_KEY", "")
