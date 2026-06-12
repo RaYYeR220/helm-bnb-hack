@@ -38,3 +38,8 @@ Thumbs.db
 # Playwright MCP artifacts
 .playwright-mcp/
 out/
+
+# Internal planning artifacts — kept local, not for the public repo
+BRIEF.md
+docs/superpowers/
+.remember/
