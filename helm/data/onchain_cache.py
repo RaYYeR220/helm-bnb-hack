@@ -87,3 +87,74 @@ def build_onchain_features(
     aligned = native.reindex(index).ffill().fillna(0.0)
     aligned.index = index
     return aligned[["tvl_mom20", "tvl_dd", "pancake_share_mom20"]]
+
+
+def _market_aggregate(cache, prefix: str, symbols: list[str]) -> pd.Series:
+    """Cross-sectional MEAN of cached per-symbol ``{prefix}{sym}`` series.
+
+    Reads each symbol's Series (missing ones skipped), assembles a date x symbol
+    frame, and returns the row-wise mean (skipna). Empty if no symbol is cached.
+    Causal: each value is a same-date average of inputs, no time shift.
+    """
+    cols: dict[str, pd.Series] = {}
+    for sym in symbols:
+        s = cache.get_series(f"{prefix}{sym}")
+        if s is not None and len(s) > 0:
+            cols[sym] = s.sort_index()
+    if not cols:
+        return pd.Series(dtype=float)
+    frame = pd.DataFrame(cols).sort_index()
+    return frame.mean(axis=1, skipna=True)
+
+
+def _trailing_z(s: pd.Series, z_window: int, min_periods: int) -> pd.Series:
+    """Causal trailing z-score: ``(x_t - rollmean_t) / rollstd_t`` over the prior
+    ``z_window`` values (pandas ``.rolling`` is backward-looking, so only data at
+    dates <= t is used). Zero/NaN std -> 0.0; result is finite."""
+    if s.empty:
+        return s
+    roll = s.rolling(z_window, min_periods=min_periods)
+    mean = roll.mean()
+    std = roll.std(ddof=1)
+    z = (s - mean) / std.replace(0.0, pd.NA)
+    return z.replace([float("inf"), float("-inf")], pd.NA).astype(float)
+
+
+def build_flow_features(
+    cache,
+    index: pd.DatetimeIndex,
+    symbols: list[str],
+    z_window: int = 60,
+    min_periods: int = 10,
+) -> pd.DataFrame:
+    """Causal, panel-aligned WHALE + CEX flow feature frame for ``index``.
+
+    Columns: ``net_whale_flow_z`` (trailing z of the market-mean large-transfer
+    whale-activity series, cache keys ``whaleflow_{sym}``) and ``net_cex_flow_z``
+    (trailing z of the market-mean CEX net-inflow series, cache keys
+    ``cexflow_{sym}``). Each is market-aggregated (cross-sectional mean across the
+    cached symbols), then z-scored on a CAUSAL trailing window of ``z_window``
+    days (data <= t only), then reindex-ffilled onto ``index`` and zero-filled.
+
+    Missing symbols are tolerated (averaged over whatever is cached); if NEITHER
+    kind has any cached symbol, the corresponding column is all zeros. The output
+    is always finite (``ffill().fillna(0.0)``).
+    """
+    whale = _market_aggregate(cache, "whaleflow_", symbols)
+    cexf = _market_aggregate(cache, "cexflow_", symbols)
+
+    whale_z = _trailing_z(whale, z_window, min_periods).rename("net_whale_flow_z")
+    cex_z = _trailing_z(cexf, z_window, min_periods).rename("net_cex_flow_z")
+
+    native = pd.concat([whale_z, cex_z], axis=1)
+    if native.empty:
+        native = pd.DataFrame(
+            columns=["net_whale_flow_z", "net_cex_flow_z"]
+        )
+    aligned = native.reindex(index).ffill().fillna(0.0)
+    aligned.index = index
+    # guarantee both columns exist even if one kind had no cached data
+    for col in ("net_whale_flow_z", "net_cex_flow_z"):
+        if col not in aligned.columns:
+            aligned[col] = 0.0
+    return aligned[["net_whale_flow_z", "net_cex_flow_z"]]
