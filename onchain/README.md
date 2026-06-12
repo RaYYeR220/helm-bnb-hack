@@ -163,6 +163,25 @@ The ERC-8183 commerce loop (`create_job` → `fund` → `submit` → `settle` /
 `dispute` / `claim_refund`), deliverable manifesting + keccak hash verification,
 the provider poll loop, the `LocalStorageProvider`, and the strict `SigningPolicy`
 are all wired against the real SDK and covered by **33 offline tests** that fake
-the SDK client at injection seams. The `--serve` / `--hire` escrow round-trip is
-human-run and needs the wallet funded with the escrow token (the registration
-above is gas-free; escrow is not).
+the SDK client at injection seams.
+
+### Live escrow round-trip — verified up to the token gate
+
+Running `--serve` + `--hire` live against the testnet contracts gets this far,
+honestly:
+
+- The provider boots (uvicorn + the SDK funded-job poll loop). ✓
+- `create_job` **lands on-chain** — unlike registration, the ERC-8183 commerce
+  ops are *not* MegaFuel-sponsored, so this needs a little tBNB for gas (the
+  wallet was funded with 0.02 tBNB; the job is created). ✓
+- `set_budget` then reverts with `ZeroBudget()` — the escrow **requires a
+  positive budget in the payment token `U`** (`0xc70B8741…5565`, an immutable
+  `MinimalERC20` on the commerce kernel). `U` has **no public faucet/mint** on
+  this testnet deployment, so a non-zero, fundable budget needs `U` from the
+  program's distributor. Until then, `fund` → `submit` → `settle` are exercised
+  only in the offline tests.
+
+So: identity is **live on-chain** (agent 1368), job creation is **live on-chain**,
+and the funded settlement is gated solely on obtaining the `U` test token — not
+on any missing integration. Fund the wallet with `U` and the same `--hire` run
+completes the create → fund → submit → settle → keccak-verify loop end to end.
