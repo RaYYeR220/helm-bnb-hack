@@ -86,8 +86,12 @@ class OnchainConfirmedMomentum(Strategy):
         mu = prior.mean()
         sd = prior.std(ddof=1)
         if not sd or sd <= 0:
-            # flat prior — if the current value is materially above the flat
-            # baseline treat it as infinite z (veto); otherwise keep.
+            # Flat prior. A flat ZERO baseline (no prior CEX activity) carries no
+            # scale to judge a spike against, so we do NOT veto on any positive
+            # value. A flat NON-zero baseline vetoes only a materially larger
+            # current value (multiplicative threshold).
+            if mu <= 0:
+                return False
             return bool(window.iloc[-1] > mu * (1 + self.cex_veto_threshold))
         z = (window.iloc[-1] - mu) / sd
         return bool(z > self.cex_veto_threshold)

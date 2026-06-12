@@ -111,3 +111,33 @@ def test_insufficient_cex_history_keeps_name():
         confirm_window=25,
     )
     assert set(s.target_weights(prices)[lambda w: w > 0].index) == {"A", "B", "C"}
+
+
+def test_zero_baseline_prior_does_not_veto_small_positive_inflow():
+    # Prior window is all zeros (no CEX activity), current window has a tiny
+    # positive net inflow. A flat ZERO baseline must NOT veto on any positive
+    # value -- only a flat NON-zero baseline with a material spike vetoes.
+    import numpy as np
+    import pandas as pd
+
+    from helm.strategies.momentum import CrossSectionalMomentum
+    from helm.strategies.momentum_confirmed import OnchainConfirmedMomentum
+
+    n = 40
+    idx = pd.date_range("2024-01-01", periods=n, freq="D")
+    # B trends up so momentum picks it; A flat
+    prices = pd.DataFrame(
+        {"A": np.ones(n) * 100.0, "B": np.linspace(100, 200, n)}, index=idx
+    )
+    # B CEX inflow: 37 zeros then 3 tiny positives -> flat-zero prior
+    cex = pd.DataFrame(
+        {"B": [0.0] * 37 + [0.5, 0.4, 0.6]}, index=idx
+    )
+    strat = OnchainConfirmedMomentum(
+        CrossSectionalMomentum(lookback=20, top_n=1),
+        confirm_window=3,
+        cex_inflow=cex,
+        cex_veto_threshold=2.0,
+    )
+    w = strat.target_weights(prices)
+    assert w.get("B", 0.0) > 0.0  # not vetoed by a zero baseline

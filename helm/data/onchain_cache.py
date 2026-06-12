@@ -110,7 +110,8 @@ def _market_aggregate(cache, prefix: str, symbols: list[str]) -> pd.Series:
 def _trailing_z(s: pd.Series, z_window: int, min_periods: int) -> pd.Series:
     """Causal trailing z-score: ``(x_t - rollmean_t) / rollstd_t`` over the prior
     ``z_window`` values (pandas ``.rolling`` is backward-looking, so only data at
-    dates <= t is used). Zero/NaN std -> 0.0; result is finite."""
+    dates <= t is used). Zero/NaN std and the warm-up rows yield NaN here; the
+    caller (``build_flow_features``) ffills then fills 0.0 so the panel is finite."""
     if s.empty:
         return s
     roll = s.rolling(z_window, min_periods=min_periods)
