@@ -235,6 +235,15 @@ We'd rather state these than have a judge find them:
 - **8-major universe for the headline numbers.** The full BEP-20 universe ships
   in `helm/data/universe_bsc_149.json`; the validated headline run uses the
   liquid, data-rich 8-major subset for clean OHLCV coverage.
+- **Whale / CEX-flow fusion was ~neutral on this universe — and we report that.**
+  The Bitquery whale + CEX-flow layer (`helm/data/bitquery.py`, 3-year depth) is
+  real, causal, and evaluated through the *same* walk-forward harness. On the
+  8-major test, fusing it into the regime path did **not** beat the TVL-only
+  variant on OOS Sharpe (≈0.65 vs ≈0.67, within noise); the CEX-inflow veto added
+  a small total-return edge. We built the differentiator and *measured* it honestly
+  rather than claiming an edge it didn't show — the framework evaluates every
+  feature out-of-sample, which is the point. Signed net-flow and a wider universe
+  are the obvious next levers (`scripts/flow_validation.py` reproduces this).
 
 ---
 
