@@ -52,18 +52,20 @@ export function DqSection({ data }: { data: HelmData }) {
                       className={`dq-row__fill ${breaches ? 'breach' : 'safe'}`}
                       style={{ width: `${widthPct}%` }}
                     />
-                    <span className={`dq-row__val mono ${breaches ? 'neg' : 'pos'}`}>
-                      −{(b.dd * 100).toFixed(1)}%
-                      {breaches ? ' · DQ' : ' · clear'}
-                    </span>
                   </div>
+                  <span className={`dq-row__val mono ${breaches ? 'neg' : 'pos'}`}>
+                    −{(b.dd * 100).toFixed(1)}%{breaches ? ' · DQ' : ' · clear'}
+                  </span>
                 </div>
               );
             })}
-            {/* The DQ line */}
+            {/* The DQ line — aligned to the (now narrower) track between the
+                label column and the reserved value column. */}
             <div
               className="dq-line"
-              style={{ left: `calc(var(--label-w) + (100% - var(--label-w)) * ${DQ_CAP / scaleMax})` }}
+              style={{
+                left: `calc(var(--label-w) + var(--col-gap) + (100% - var(--label-w) - var(--val-w) - var(--col-gap) * 2) * ${DQ_CAP / scaleMax})`,
+              }}
             >
               <span className="dq-line__label mono">30% DQ CAP</span>
             </div>
@@ -93,9 +95,9 @@ export function DqSection({ data }: { data: HelmData }) {
       </div>
 
       <style>{`
-        .dq-chart { --label-w: 220px; }
+        .dq-chart { --label-w: 220px; --val-w: 112px; --col-gap: 16px; }
         .dq-rows { position: relative; display: flex; flex-direction: column; gap: 22px; padding: 8px 0; }
-        .dq-row { display: grid; grid-template-columns: var(--label-w) 1fr; align-items: center; gap: 16px; }
+        .dq-row { display: grid; grid-template-columns: var(--label-w) 1fr var(--val-w); align-items: center; gap: var(--col-gap); }
         .dq-row__name {
           font-size: 14px; color: var(--ink-dim); text-align: right;
           display: inline-flex; align-items: center; gap: 7px; justify-content: flex-end;
@@ -113,8 +115,9 @@ export function DqSection({ data }: { data: HelmData }) {
         .dq-row__fill.breach {
           background: linear-gradient(90deg, rgba(255,93,93,0.5), var(--danger));
         }
-        .dq-row__val { position: absolute; left: calc(100% + 0px); padding-left: 12px; white-space: nowrap; font-size: 12.5px; transform: translateX(0); }
-        .dq-row__fill.safe + .dq-row__val { color: var(--helm); }
+        .dq-row__val { white-space: nowrap; font-size: 12.5px; text-align: left; }
+        .dq-row__val.pos { color: var(--helm); }
+        .dq-row__val.neg { color: var(--danger); }
 
         .dq-line {
           position: absolute; top: -4px; bottom: -4px; width: 0;
@@ -133,10 +136,10 @@ export function DqSection({ data }: { data: HelmData }) {
         .dq-card__k { font-size: 11.5px; color: var(--mute); line-height: 1.5; }
 
         @media (max-width: 760px) {
-          .dq-chart { --label-w: 130px; }
+          .dq-chart { --label-w: 116px; --val-w: 92px; --col-gap: 10px; }
           .dq-row__name { font-size: 12px; }
           .dq-cards { grid-template-columns: 1fr; }
-          .dq-row__val { font-size: 11px; padding-left: 8px; }
+          .dq-row__val { font-size: 10.5px; }
         }
       `}</style>
     </section>
