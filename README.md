@@ -13,6 +13,9 @@ above the whole thing that overrides to cash on a confirmed downtrend.
 Built for the BNB Hack (CoinMarketCap × Trust Wallet), **Track 2 — Strategy
 Skills**, targeting the **Best Use of Agent Hub** special prize.
 
+**▶ Watch the demo (3 min):** https://youtu.be/jSBwOyNXZkA
+**◆ Live dashboard:** https://helm-bnb-hack.vercel.app
+
 ---
 
 ## The story in three parts
