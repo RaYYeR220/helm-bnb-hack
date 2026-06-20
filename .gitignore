@@ -41,5 +41,5 @@ out/
 
 # Internal planning artifacts — kept local, not for the public repo
 BRIEF.md
-docs/superpowers/
+docs/
 .remember/

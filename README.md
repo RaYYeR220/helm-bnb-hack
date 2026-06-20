@@ -215,7 +215,8 @@ npm run build          # static export to dashboard/out — servable anywhere
 
 The committed `dashboard/public/data/*.json` are snapshots of `data_cache/`
 artifacts; refresh them after re-running the scripts with
-`node dashboard/scripts/sync-data.mjs`. Screenshots in [`docs/media/`](docs/media/).
+`node dashboard/scripts/sync-data.mjs`. The live dashboard is at
+https://helm-bnb-hack.vercel.app.
 
 ---
 
